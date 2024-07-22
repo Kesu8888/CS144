@@ -42,4 +42,7 @@ public:
 
 private:
   ByteStream output_; // the Reassembler writes to this ByteStream
+  uint64_t curIndex = 0;
+  uint64_t eofPos = INTMAX_MAX;
+  std::unordered_map<uint64_t, char> storage{};
 };

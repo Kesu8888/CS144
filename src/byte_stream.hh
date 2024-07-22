@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include "deque"
+#include "unordered_map"
 
 class Reader;
 class Writer;
