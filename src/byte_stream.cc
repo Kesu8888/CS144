@@ -56,14 +56,21 @@ uint64_t Reader::bytes_popped() const
 string_view Reader::peek() const
 {
   // Your code here.
-  return buf;
+  string s;
+  for (uint64_t i = 0; i < buf.size(); i++) {
+    s.push_back(buf.at(i));
+  }
+  return s;
 }
 
 void Reader::pop( uint64_t len )
 {
   // Your code here.
-  buf.erase(0, len);
   bytesPoped += len;
+  while (len > 0) {
+    buf.pop_front();
+    len --;
+  }
 }
 
 uint64_t Reader::bytes_buffered() const

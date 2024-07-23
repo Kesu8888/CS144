@@ -46,10 +46,9 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
   for (char c : data) {
     if (first_index >= endIndex)
       break;
-    if (storage.contains(first_index)) {
-      continue;
+    if (!storage.contains(first_index)) {
+      storage.insert( { first_index, c } );
     }
-    storage.insert( { first_index, c } );
     first_index ++;
   }
 }
