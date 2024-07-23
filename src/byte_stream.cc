@@ -15,12 +15,7 @@ void Writer::push( string data )
   // Your code here.
   uint64_t size = data.size()+buf.size() > capacity_ ? capacity_-buf.size() : data.size();
   bytesPushed += size;
-  for (char c : data) {
-    if (size-- <= 0) {
-      break;
-    }
-    buf.push_back(c);
-  }
+  buf.append(string_view(data.data(), size));
 }
 
 void Writer::close()
@@ -56,21 +51,14 @@ uint64_t Reader::bytes_popped() const
 string_view Reader::peek() const
 {
   // Your code here.
-  string s;
-  for (uint64_t i = 0; i < buf.size(); i++) {
-    s.push_back(buf.at(i));
-  }
-  return s;
+  return buf;
 }
 
 void Reader::pop( uint64_t len )
 {
   // Your code here.
   bytesPoped += len;
-  while (len > 0) {
-    buf.pop_front();
-    len --;
-  }
+  buf = string_view(buf.data()+len, buf.size()-len);
 }
 
 uint64_t Reader::bytes_buffered() const

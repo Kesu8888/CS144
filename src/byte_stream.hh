@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
-#include "deque"
+#include "queue"
 #include "unordered_map"
 
 class Reader;
@@ -27,7 +27,7 @@ protected:
   // Please add any additional state to the ByteStream here, and not to the Writer and Reader interfaces.
   uint64_t capacity_;
   bool error_ {};
-  std::deque<char> buf{};
+  std::string buf{};
   uint64_t bytesPoped = 0;
   uint64_t bytesPushed = 0;
   bool eof = false;
@@ -47,7 +47,7 @@ public:
 class Reader : public ByteStream
 {
 public:
-  std::string_view peek() const; // Peek at the next bytes in the buffer
+  [[nodiscard]] std::string_view peek() const; // Peek at the next bytes in the buffer
   void pop( uint64_t len );      // Remove `len` bytes from the buffer
 
   bool is_finished() const;        // Is the stream finished (closed and fully popped)?
