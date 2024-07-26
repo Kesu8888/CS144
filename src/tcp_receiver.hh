@@ -26,5 +26,7 @@ public:
   const Writer& writer() const { return reassembler_.writer(); }
 
 private:
+  bool SYN {};
+  Wrap32 zeropoint{0};
   Reassembler reassembler_;
 };
