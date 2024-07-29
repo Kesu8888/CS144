@@ -46,6 +46,9 @@ public:
 private:
   // Variables initialized in constructor
   ByteStream input_;
-  Wrap32 isn_;
+  Wrap32 isn_ = Wrap32(random());
   uint64_t initial_RTO_ms_;
+  std::queue<TCPSenderMessage> unAck{};
+  uint64_t absSeqno = 0;
+  uint64_t windows = 0;
 };
