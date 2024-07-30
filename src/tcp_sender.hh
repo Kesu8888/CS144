@@ -45,10 +45,17 @@ public:
 
 private:
   // Variables initialized in constructor
+  void startTimer() {timer = timer >= initial_RTO_ms_ ? 0 : timer;}
+  void stopTimer() {timer = UINT64_MAX;}
   ByteStream input_;
   Wrap32 isn_ = Wrap32(random());
+
   uint64_t initial_RTO_ms_;
-  std::queue<TCPSenderMessage> unAck{};
-  uint64_t absSeqno = 0;
+  uint64_t timer = 0;
+  uint64_t retrans = 0;
+
+  uint64_t recvAck = 0; //Max seqno acknowledged by the receiver
   uint64_t windows = 0;
+  std::queue<TCPSenderMessage> unAck{};
+  uint64_t absSeqno = 0; //Highest seqno we have sent
 };
