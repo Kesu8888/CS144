@@ -19,37 +19,57 @@ void TCPSender::push( const TransmitFunction& transmit )
 {
   // Your code here.
   // Read all the data of the input stream
+  if (FINSent)
+    return;
+
   if (windows == 0) {
-    TCPSenderMessage msg = make_empty_message();
+    TCPSenderMessage msg;
     //If the msg contains SYN or FIN, add it to "unAck".
-    if (msg.sequence_length() > 0) {
-      absSeqno += msg.sequence_length();
-      unAck.push(msg);
-      timer = (timer == 0) ? initial_RTO_ms_ : timer;
+    msg.seqno = Wrap32::wrap(absSeqno, isn_);
+    if (absSeqno == 0) {
+      msg.SYN = true;
+    } else if (input_.reader().is_finished() && !FINSent) {
+      msg.FIN = true;
+      FINSent = true;
     }
-    transmit(msg);
+    if (msg.sequence_length() > 0) {
+      absSeqno++;
+      unAck.push(msg);
+      transmit(msg);
+      startTimer();
+    }
     return;
   }
 
   // Send as much as senderMessage
   uint64_t maxSeqno = recvAck + windows;
-  while (absSeqno < maxSeqno && !input_.reader().peek().empty()) {
-    //Get the max amount of data we can send
+  while (absSeqno < maxSeqno && !FINSent) {
+    //Get the max buffer space
     uint64_t bufSize = min(maxSeqno-absSeqno, TCPConfig::MAX_PAYLOAD_SIZE);
+
+    string_view data;
+    if ((data = input_.reader().peek()).empty() && !input_.reader().is_finished())
+      return;
     TCPSenderMessage send;
     send.seqno = Wrap32::wrap(absSeqno, isn_);
-    string_view data = input_.reader().peek();
+
 
     //Avoid exception caused by out of range substring.
-    if (data.size() < bufSize) {
+    if (data.size() <= bufSize) {
       send.payload = data;
     } else
       send.payload = data.substr(0, bufSize);
 
-    //Pop out the bytes, set the FIN flag ans update the absSeqno
+    //Pop out the bytes, set the FIN flag and update the absSeqno
     input_.reader().pop( send.payload.size());
-    send.FIN = input_.reader().is_finished();
-    absSeqno += send.payload.size();
+    send.SYN = absSeqno == 0;
+    send.RST = RST;
+    //Adding FIN flag if the stream is closed, the FIN flag is not limited by max payload size.
+    if (input_.reader().is_finished() && (recvAck+windows-absSeqno) > data.size()) {
+      send.FIN = input_.reader().is_finished();
+      FINSent = true;
+    }
+    absSeqno += send.SYN+send.payload.size()+send.FIN;
 
     //Save the msg to "unAck" and send the msg
     unAck.push(send);
@@ -63,8 +83,6 @@ TCPSenderMessage TCPSender::make_empty_message() const
   // Your code here.
   TCPSenderMessage msg;
   msg.seqno = Wrap32::wrap(absSeqno, isn_);
-  msg.SYN = absSeqno == 0;
-
   return msg;
 }
 
@@ -72,7 +90,16 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
 {
   // Your code here.
   //Calculate the msg
-  uint64_t msgSeqno = msg.ackno->unwrap(isn_, absSeqno);
+  if (msg.RST) {
+    RST = true;
+    return;
+  }
+
+  uint64_t msgSeqno = msg.ackno == nullopt ? 0 : msg.ackno->unwrap(isn_, absSeqno);
+  //Receive an impossible seqno, we should ignore it
+  if (msgSeqno > absSeqno)
+    return;
+
   //If the acknowledged seqno is below our recvAck, it means the msg is outdated. A newer msg was received previously
   //and we can ignore this msg.
   if (msgSeqno <= recvAck) {
@@ -92,14 +119,17 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
       break;
     }
     unAck.pop();
+    stopTimer();
   }
+  if (!unAck.empty())
+    startTimer();
 }
 
 void TCPSender::tick( uint64_t ms_since_last_tick, const TransmitFunction& transmit )
 {
   // Your code here.
   // If the timer is not started, return
-  if (timer == UINT64_MAX)
+  if (timer >= RTO)
     return;
 
   //If no msg in the retransmission list, stop the timer and return
@@ -110,9 +140,10 @@ void TCPSender::tick( uint64_t ms_since_last_tick, const TransmitFunction& trans
 
   //timer plus the past tick. If it is above the RTO_ms limit, transmit the function
   timer += ms_since_last_tick;
-  if (timer >= initial_RTO_ms_) {
+  if (timer >= RTO) {
     transmit(unAck.front());
     retrans ++;
     timer = 0;
+    RTO *= 2;
   }
 }
