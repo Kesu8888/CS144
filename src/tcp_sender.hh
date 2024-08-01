@@ -16,7 +16,7 @@ class TCPSender
 public:
   /* Construct TCP sender with given default Retransmission Timeout and possible ISN */
   TCPSender( ByteStream&& input, Wrap32 isn, uint64_t initial_RTO_ms )
-    : input_( std::move( input ) ), isn_( isn ), initial_RTO_ms_( initial_RTO_ms ), RTO(initial_RTO_ms)
+    : input_( std::move( input ) ), isn_( isn ), initial_RTO_ms_( initial_RTO_ms )
   {}
 
   /* Generate an empty TCPSenderMessage */
@@ -45,20 +45,21 @@ public:
 
 private:
   // Variables initialized in constructor
-  void startTimer() {if (timer >= RTO) {timer = 0; RTO = initial_RTO_ms_;}}
-  void stopTimer() {timer = UINT64_MAX; RTO = initial_RTO_ms_;retrans = 0;}
+  void startTimer(uint64_t RTO_);
+  void stopTimer();
   ByteStream input_;
-  Wrap32 isn_ = Wrap32(random());
+  Wrap32 isn_;
   bool FINSent = false;
-  bool RST = false;
 
   uint64_t initial_RTO_ms_;
-  uint64_t timer = 0;
-  uint64_t RTO;
+  uint64_t RTO = 0;
+  uint64_t timer = initial_RTO_ms_;
   uint64_t retrans = 0;
 
   uint64_t recvAck = 0; //Max seqno acknowledged by the receiver
   uint64_t windows = 0;
   std::queue<TCPSenderMessage> unAck{};
   uint64_t absSeqno = 0; //Highest seqno we have sent
+
+  bool stuckMsg = false; //if true, a '0' window size msg was sent
 };
