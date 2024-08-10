@@ -48,11 +48,30 @@ ans: The probability is 100%.
 “unconditional” packet delivery rate in the first question? How independent or
 bursty were the losses?
 
-The probability of packet loss is not so independent on time. We have also seen a consecutive sequence number of size 2172 though the average consecutive sequence length is 210.
+ans: The probability of packet loss is not so independent on time. We have also seen a consecutive sequence number of size 2172 though the average consecutive sequence length is 210.
 
 
 question 5: What was the minimum RTT seen over the entire interval? (This is probably a
 reasonable approximation of the true MinRTT...)
+
+ans: The minimum RTT is 242ms. I loop each line in the data.txt and find the lowest time(RTT) which is 242ms.
+
+question 6: What was the maximum RTT seen over the entire interval?
+
+ans: The maximum RTT is 513.
+
+question 7: Make a graph of the RTT as a function of time. Label the x-axis with the actual time of
+day (covering the 2+-hour period), and the y-axis should be the number of milliseconds
+of RTT.
+
+ans: Since the total numer of data is too much, I can't fix it in a small chart. I will use a time interval of 155*0.2s = 31s instead of 0.2s. The graph is store in the lab4/ directory with name "qn7.png"
+
+
+question 8: Make a histogram or Cumulative Distribution Function of the distribution of RTTs observed. What rough shape is the distribution?
+
+ans: The distribution graph is shown in lab4/ directory with name "qn8.png".The distribution is a mountain shape. High at middle RTT, and low at high and low RTT.
+
+question 9: make a graph of the correlation between “RTT of ping #N” and “RTT of ping #N+1”.The x-axis should be the number of milliseconds from the first RTT, and the y-axis should be the number of milliseconds from the second RTT. How correlated is the RTT over time?
 
 
 

@@ -9,7 +9,6 @@ struct EthernetFrame
 {
   EthernetHeader header {};
   std::vector<std::string> payload {};
-
   void parse( Parser& parser )
   {
     header.parse( parser );

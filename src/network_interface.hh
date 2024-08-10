@@ -5,6 +5,9 @@
 #include "address.hh"
 #include "ethernet_frame.hh"
 #include "ipv4_datagram.hh"
+#include "deque"
+#include "set"
+#include "unordered_map"
 
 // A "network interface" that connects IP (the internet layer, or network layer)
 // with Ethernet (the network access layer, or link layer).
@@ -72,12 +75,25 @@ private:
   // The physical output port (+ a helper function `transmit` that uses it to send an Ethernet frame)
   std::shared_ptr<OutputPort> port_;
   void transmit( const EthernetFrame& frame ) const { port_->transmit( *this, frame ); }
+  void reply(ARPMessage& msg);
 
   // Ethernet (known as hardware, network-access-layer, or link-layer) address of the interface
   EthernetAddress ethernet_address_;
 
   // IP (known as internet-layer or network-layer) address of the interface
   Address ip_address_;
+
+  // Mapping between IPAddress and eth_address, kept for 30 seconds
+  std::unordered_map<uint32_t, EthernetAddress> cacheList{};
+
+  // ARP requests, kept for 5 seconds, requestList is used to quickly search the address
+  std::unordered_map<uint32_t, std::deque<InternetDatagram>> requestList{};
+
+  //Clock object that record the time
+  std::deque<std::pair<size_t, uint32_t>> cacheClock{};
+  std::deque<std::pair<size_t, uint32_t>> requestClock{};
+  size_t rClock{};
+  size_t cClock{};
 
   // Datagrams that have been received
   std::queue<InternetDatagram> datagrams_received_ {};

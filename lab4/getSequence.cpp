@@ -5,15 +5,38 @@
 #include "iostream"
 #include "fstream"
 #include "string"
+#include "vector"
 using namespace std;
 
 int main(int argc, char* argv[]) {
-  ifstream data("data.txt");
+  ifstream data("output.txt");
   string line;
-  set<int> list;
-  getline(data, line);
-  int i = 0;
-  while (true) {
+  ofstream output1("qn8.txt");
+  vector<int> list(7, 0);
+  while ( getline(data, line)) {
+    int num = stoi(line);
+    if ( num < 250) {
+      list[0] ++;
+    } else if ( num < 300) {
+      list[1] ++;
+    } else if (num < 350) {
+      list[2] ++;
+    } else if (num < 400) {
+      list[3] ++;
+    } else if (num < 450) {
+      list[4] ++;
+    } else if (num < 500) {
+      list[5] ++;
+    } else {
+      list[6] ++;
+    }
+  }
+  for (int i : list) {
+    output1 << i << "\n";
+  }
+data.close();
+output1.close();
+  /*while (true) {
     if (line.at(i) == 't') {
       if (line.at(i+1) == 'i') {
         break;
@@ -32,8 +55,7 @@ int main(int argc, char* argv[]) {
       j++;
     }
     output << num << "\n";
-  } while ( getline(data, line));
-
+  } while ( getline(data, line));*/
 
   //The below code is to get total unique sequence numbers received
   /*while ( getline(data, line)) {

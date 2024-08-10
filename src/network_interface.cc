@@ -28,20 +28,100 @@ NetworkInterface::NetworkInterface( string_view name,
 void NetworkInterface::send_datagram( const InternetDatagram& dgram, const Address& next_hop )
 {
   // Your code here.
-  (void)dgram;
-  (void)next_hop;
+  uint32_t ipAddr = next_hop.ipv4_numeric();
+  EthernetFrame send;
+  if (cacheList.contains(ipAddr)) {
+    EthernetAddress eth = cacheList.at(ipAddr);
+    send.header.type = EthernetHeader::TYPE_IPv4;
+    send.payload = serialize(dgram);
+    send.header.src = ethernet_address_;
+    send.header.dst = eth;
+    transmit(send);
+  } else {
+    if (requestList.contains(ipAddr)) {
+      requestList.at(ipAddr).push_back(dgram);
+      return;
+    }
+    send.header.type = EthernetHeader::TYPE_ARP;
+    ARPMessage arpSend;
+    arpSend.opcode = ARPMessage::OPCODE_REQUEST;
+    arpSend.sender_ethernet_address = ethernet_address_;
+    arpSend.sender_ip_address = ip_address_.ipv4_numeric();
+    arpSend.target_ip_address = ipAddr;
+    send.payload = serialize(arpSend);
+    send.header.src = ethernet_address_;
+    send.header.dst = ETHERNET_BROADCAST;
+    transmit(send);
+    std::deque<InternetDatagram> ID;
+    ID.push_back(dgram);
+    requestList.insert({ipAddr, ID});
+    requestClock.emplace_back(rClock+5000, ipAddr);
+  }
 }
 
 //! \param[in] frame the incoming Ethernet frame
 void NetworkInterface::recv_frame( const EthernetFrame& frame )
 {
   // Your code here.
-  (void)frame;
+
+  if (frame.header.type == EthernetHeader::TYPE_IPv4) {
+    if (frame.header.dst != ethernet_address_)
+      return;
+    IPv4Datagram recv;
+    if (parse(recv, frame.payload)) {
+      datagrams_received_.push(recv);
+    }
+  } else {
+    ARPMessage recv;
+    if (parse(recv, frame.payload)) {
+      uint32_t ipAddr = recv.sender_ip_address;
+      if (!cacheList.contains(ipAddr)) {
+        cacheList.insert({ipAddr, recv.sender_ethernet_address});
+        cacheClock.emplace_back(cClock+30000, ipAddr);
+        if (requestList.contains(ipAddr)) {
+          for (const InternetDatagram& ID : requestList.at(ipAddr)) {
+            send_datagram(ID, Address::from_ipv4_numeric(ipAddr));
+          }
+          requestList.erase(ipAddr);
+        }
+      }
+      if (recv.opcode == ARPMessage::OPCODE_REQUEST && recv.target_ip_address == ip_address_.ipv4_numeric()) {
+        reply(recv);
+      }
+    }
+  }
 }
 
+void NetworkInterface::reply(ARPMessage& msg) {
+  msg.opcode = ARPMessage::OPCODE_REPLY;
+  msg.target_ip_address = msg.sender_ip_address;
+  msg.target_ethernet_address = msg.sender_ethernet_address;
+  msg.sender_ip_address = ip_address_.ipv4_numeric();
+  msg.sender_ethernet_address = ethernet_address_;
+  EthernetFrame reply;
+  reply.payload = serialize(msg);
+  reply.header.type = EthernetHeader::TYPE_ARP;
+  reply.header.src = ethernet_address_;
+  reply.header.dst = msg.target_ethernet_address;
+  transmit(reply);
+}
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
 void NetworkInterface::tick( const size_t ms_since_last_tick )
 {
   // Your code here.
-  (void)ms_since_last_tick;
+  cClock += ms_since_last_tick;
+  rClock += ms_since_last_tick;
+  while (!cacheClock.empty() && cacheClock.front().first <= cClock) {
+    cacheList.erase(cacheClock.front().second);
+    cacheClock.pop_front();
+  }
+  if (cacheClock.empty())
+    cClock = 0;
+
+  while (!requestClock.empty() && requestClock.front().first <= rClock) {
+    requestList.erase(requestClock.front().second);
+    requestClock.pop_front();
+  }
+  if (requestClock.empty())
+    rClock = 0;
 }

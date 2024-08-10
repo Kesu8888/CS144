@@ -21,7 +21,6 @@ struct EthernetHeader
   static constexpr size_t LENGTH = 14;         //!< Ethernet header length in bytes
   static constexpr uint16_t TYPE_IPv4 = 0x800; //!< Type number for [IPv4](\ref rfc::rfc791)
   static constexpr uint16_t TYPE_ARP = 0x806;  //!< Type number for [ARP](\ref rfc::rfc826)
-
   EthernetAddress dst;
   EthernetAddress src;
   uint16_t type;
