@@ -21,10 +21,47 @@ void Router::add_route( const uint32_t route_prefix,
        << " on interface " << interface_num << "\n";
 
   // Your code here.
+  for (uint8_t i = prefix_length; i <= 32; i++)
+  hops.at(prefix_length).insert({route_prefix & masks.at(i), hopInfo(next_hop, interface_num)});
 }
 
 // Go through all the interfaces, and route every incoming datagram to its proper outgoing interface.
 void Router::route()
 {
   // Your code here.
+  for (std::shared_ptr<NetworkInterface>& NI : _interfaces) {
+    std::queue<InternetDatagram>& q = NI->datagrams_received();
+    while (!q.empty()) {
+      InternetDatagram ID = q.front();
+      q.pop();
+      if (ID.header.ttl <= 1) {
+        continue;
+      }
+      ID.header.ttl --;
+      ID.header.compute_checksum();
+      optional<hopInfo> hp;
+      for (int i = 32; i >= 0; i--) {
+        uint32_t dst = ID.header.dst & masks.at(i);
+        if (hops[i].contains(dst)) {
+          hp = hops[i].at(dst);
+          break;
+        }
+      }
+      if (hp->ipAddr != nullopt) {
+        interface(hp->interface)->send_datagram(ID, hp->ipAddr.value());
+      } else {
+        interface(hp->interface)->send_datagram(ID, Address::from_ipv4_numeric(ID.header.dst));
+      }
+    }
+  }
+}
+std::vector<uint32_t> Router::mask_init()
+{
+  std::vector<uint32_t> mask(33);
+  mask[0] = 0;
+  mask[1] = 1 << 31;
+  for (size_t i = 2; i < mask.size(); i++) {
+    mask.at(i) = mask.at(i-1) | (mask.at(i-1)>>1);
+  }
+  return mask;
 }

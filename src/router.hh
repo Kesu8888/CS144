@@ -5,6 +5,7 @@
 
 #include "exception.hh"
 #include "network_interface.hh"
+#include "unordered_map"
 
 // \brief A router that has multiple network interfaces and
 // performs longest-prefix-match routing between them.
@@ -31,8 +32,17 @@ public:
 
   // Route packets between the interfaces
   void route();
+  class hopInfo {
+  public:
+    std::optional<Address> ipAddr{};
+    size_t interface{};
+    hopInfo(std::optional<Address> addr, size_t intF) {ipAddr = addr, interface = intF;}
+  };
 
 private:
   // The router's collection of network interfaces
+  static std::vector<uint32_t> mask_init();
+  std::vector<uint32_t> masks = mask_init();
   std::vector<std::shared_ptr<NetworkInterface>> _interfaces {};
+  std::vector<std::unordered_map<uint32_t, hopInfo>> hops{33};
 };

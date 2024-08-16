@@ -48,14 +48,15 @@ void NetworkInterface::send_datagram( const InternetDatagram& dgram, const Addre
     arpSend.sender_ethernet_address = ethernet_address_;
     arpSend.sender_ip_address = ip_address_.ipv4_numeric();
     arpSend.target_ip_address = ipAddr;
+    arpSend.target_ip_address = ipAddr;
     send.payload = serialize(arpSend);
     send.header.src = ethernet_address_;
     send.header.dst = ETHERNET_BROADCAST;
-    transmit(send);
     std::deque<InternetDatagram> ID;
     ID.push_back(dgram);
     requestList.insert({ipAddr, ID});
     requestClock.emplace_back(rClock+5000, ipAddr);
+    transmit(send);
   }
 }
 
